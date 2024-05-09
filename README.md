@@ -9,7 +9,7 @@ WARNING: Use this program at your own risk. While I have tested this code on my 
 
 Prerequisites: 
 
-This code relies on the tidalapi module. Installation instructions and other documentation can be found on its [GitHub page](https://github.com/tamland/python-tidal):
+This code relies on the tidalapi module. Installation instructions and other documentation can be found on its [GitHub page](https://github.com/tamland/python-tidal).
 
 Usage example:
 
