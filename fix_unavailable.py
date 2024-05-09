@@ -1,8 +1,8 @@
 # === fix_unavailable.py ===
 #
-# This program will identify, and optionally replace, unavailable songs in your TIDAL library.
-# It can also optionally replace unavailable songs in playlists you've created, but be aware
-# that the replacement tracks will be added to the very end of the playlist.
+# This program will identify, and optionally replace, unavailable albums and tracks in your TIDAL library.
+# It can also optionally replace unavailable songs in playlists you've created, but be aware that the
+# replacement tracks will be added to the very end of the playlist.
 #
 # See README.md for key details and usage information.
 
