@@ -27,7 +27,7 @@ The first three sections of this [guide](https://www.freecodecamp.org/news/the-p
 
 **You suggested backing up my library before I run this. How do I do that?**
 
-You could use a tool like [TuneMyMusic](https://tidal.com/transfer-music), or for a quick and dirty solution you could use `quick_backup.py`.
+You could use a tool like [TuneMyMusic](https://tidal.com/transfer-music), or for a quick and dirty solution you could use `backup.py`.
 
 **Something is broken. Can you fix it?**
 
