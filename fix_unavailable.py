@@ -244,7 +244,7 @@ def search_album(session, gray_album, args):
             return search_album
     if args.f:
         for search_album in search_albums:
-            if gray_album.name == search_album.name and gray_album.artist == search_album.artist:
+            if gray_album.name == search_album.name and gray_album.artist.name == search_album.artist.name:
                 return search_album
     return None
 
@@ -258,7 +258,7 @@ def search_track(session, gray_track, args):
             return search_track
     if args.f:
         for search_track in search_tracks:
-            if gray_track.full_name == search_track.full_name and gray_track.artist == search_track.artist:
+            if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name:
                 return search_track
     return None
 
@@ -278,9 +278,8 @@ def main():
     print_gray_albums(gray_albums)
     gray_tracks = find_gray_tracks(session)
     print_gray_tracks(gray_tracks)
-    if args.p:
-        gray_playlists, gray_playlist_tracks = find_gray_playlists(session)
-        print_gray_playlists(gray_playlists)
+    gray_playlists, gray_playlist_tracks = find_gray_playlists(session)
+    print_gray_playlists(gray_playlists)
 
     # Attempt to replace unavailable items if desired
     if args.r:
