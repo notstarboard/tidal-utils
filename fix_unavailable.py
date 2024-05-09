@@ -244,7 +244,8 @@ def search_album(session, gray_album, args):
             return search_album
     if args.f:
         for search_album in search_albums:
-            if gray_album.name == search_album.name and gray_album.artist.name == search_album.artist.name:
+            if gray_album.name.casefold() == search_album.name.casefold() and \
+                    gray_album.artist.name.casefold() == search_album.artist.name.casefold():
                 return search_album
     return None
 
@@ -258,7 +259,8 @@ def search_track(session, gray_track, args):
             return search_track
     if args.f:
         for search_track in search_tracks:
-            if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name:
+            if gray_track.full_name.casefold() == search_track.full_name.casefold() and \
+                    gray_track.artist.name.casefold() == search_track.artist.name.casefold():
                 return search_track
     return None
 
