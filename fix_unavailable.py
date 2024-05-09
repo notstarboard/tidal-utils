@@ -1,19 +1,10 @@
-# This program will identify, and optionally replace, unavailable songs and albums in your TIDAL Collection.
-# It will also optionally replace unavailable songs in user-created playlists.
+# === fix_unavailable.py ===
 #
-# WARNING: Use this program at your own risk. While I have tested this code on my own library and it seems to be
-#          performing well, using the -r flag will instruct the program to add and remove tracks and albums from
-#          your TIDAL library. As library changes will be happening, I highly recommend saving a backup of your
-#          library before using the -r flag in case it doesn't behave as you would expect.
+# This program will identify, and optionally replace, unavailable songs in your TIDAL library.
+# It can also optionally replace unavailable songs in playlists you've created, but be aware
+# that the replacement tracks will be added to the very end of the playlist.
 #
-# WARNING: The -p flag will add replacement versions of unavailable songs to the ENDS of your playlists. 
-#          If you care about the track order, do not use the -p flag.
-#
-# PREREQUISITES: This code relies on the tidalapi module. Install via the instructions on its GitHub page:
-#                https://github.com/tamland/python-tidal
-#
-# Usage example: python3 /path/to/fix_unavailable.py -r -f -p
-# For help, run: python3 /path/to/fix_unavailable.py -h
+# See README.md for key details and usage information.
 
 import argparse
 from pathlib import Path
