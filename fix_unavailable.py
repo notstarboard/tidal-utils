@@ -8,6 +8,7 @@
 
 import argparse
 from pathlib import Path
+import re
 import tidalapi
 
 
@@ -235,6 +236,18 @@ def replace_gray_tracks(session, gray_tracks, args):
     return missing, new_stuck, gray_stuck
 
 
+def parentheticals(string):
+    all_p = []
+    some_p = re.findall(r'\(.*?\)', string)
+    if some_p:
+        all_p.append(some_p)
+    some_p = re.findall(r'\[.*?\]', string)
+    if some_p:
+        all_p.append(some_p)
+    return all_p
+
+
+# TODO: Update this function in the style of search_track below
 def search_album(session, gray_album, args):
     query = gray_album.name + " " + gray_album.artist.name
     search_albums = session.search(query=query, models=[tidalapi.album.Album])['albums']
@@ -253,16 +266,72 @@ def search_album(session, gray_album, args):
 def search_track(session, gray_track, args):
     query = gray_track.full_name + " " + gray_track.artist.name
     search_tracks = session.search(query=query, models=[tidalapi.media.Track])['tracks']
-    for search_track in search_tracks:
-        if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name and \
-                gray_track.album.name == search_track.album.name and gray_track.audio_quality == search_track.audio_quality:
-            return search_track
-    if args.f:
-        for search_track in search_tracks:
-            if gray_track.full_name.casefold() == search_track.full_name.casefold() and \
-                    gray_track.artist.name.casefold() == search_track.artist.name.casefold():
-                return search_track
-    return None
+    score = [0] * len(search_tracks)
+    for i, search_track in enumerate(search_tracks):
+        if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name:
+            score[i] += 1000
+        elif args.f and gray_track.full_name.casefold() == search_track.full_name.casefold() and \
+                gray_track.artist.name.casefold() == search_track.artist.name.casefold():
+            score[i] += 500
+        elif args.f and strip_parentheticals(gray_track.full_name.casefold()) == \
+                strip_parentheticals(search_track.full_name.casefold()):
+            valid_name = True
+            sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', 'mix', 'rediscovered',
+                               'redux', 'reimagined', 're-imagined', 'reprise', 'stripped', 'ver.', 'version']
+            for sk in sketchy_keyword:
+                in_gray = in_search = False
+                for gray_p in parentheticals(gray_track.full_name.casefold()):
+                    if sk in gray_p:
+                        in_gray = True
+                for search_p in parentheticals(search_track.full_name.casefold()):
+                    if sk in search_p:
+                        in_search = True
+                if in_gray != in_search:
+                    valid_name = False
+                    break
+            search_artists = []
+            for artist in search_track.artists:
+                search_artists.append(artist.name.casefold())
+            if valid_name and gray_track.artist.name.casefold() in search_artists:
+                score[i] += 250
+        if gray_track.album.name == search_track.album.name:
+            score[i] += 100
+        elif args.f and gray_track.album.name.casefold() == search_track.album.name.casefold():
+            score[i] = 50
+        elif args.f and strip_parentheticals(gray_track.album.name.casefold()) == \
+                strip_parentheticals(search_track.album.name.casefold()):
+            valid_name = True
+            sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', ' mix', 'rediscovered',
+                               'redux', 'reimagined', 're-imagined', 'reprise', 'stripped']
+            for sk in sketchy_keyword:
+                in_gray = in_search = False
+                for gray_p in parentheticals(gray_track.album.name.casefold()):
+                    if sk in gray_p:
+                        in_gray = True
+                for search_p in parentheticals(search_track.album.name.casefold()):
+                    if sk in search_p:
+                        in_search = True
+                if in_gray != in_search:
+                    valid_name = False
+                    break
+            if valid_name:
+                score[i] += 25
+        if gray_track.explicit == search_track.explicit or gray_track.album.explicit == search_track.album.explicit:
+            score[i] += 10  # if clean/explicit metadata were reliable I'd rank this above album name, but it isn't
+        if gray_track.audio_quality == search_track.audio_quality and \
+                gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and \
+                gray_track.is_HiRes == search_track.is_HiRes and \
+                gray_track.is_Mqa == search_track.is_Mqa and \
+                gray_track.is_Sony360RA == search_track.is_Sony360RA:
+            score[i] += 5
+    if max(score) >= 250:  # there must at least be a fuzzy match on the artist and track name to return a match
+        return search_tracks[score.index(max(score))]
+    else:
+        return None
+
+
+def strip_parentheticals(string):
+    return re.sub(r'\[.*\]', '', re.sub(r'\(.*\)', '', string)).strip()
 
 
 def main():
