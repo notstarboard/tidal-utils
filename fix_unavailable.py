@@ -19,7 +19,7 @@ def build_parser():
                         action='store_true', required=False, default=False)
     parser.add_argument("-p", help="Extend replacements to user-created PLAYLISTS. Replaced songs will be added to the end.",
                         action='store_true', required=False, default=False)
-    parser.add_argument("-r", help="Attempt to REPLACE any unavailable Tracks & Albums in My Collection.",
+    parser.add_argument("-r", help="Attempt to REPLACE any unavailable Tracks and Albums in My Collection.",
                         action='store_true', required=False, default=False)
     return parser
 
@@ -59,6 +59,52 @@ def find_gray_playlists(session):
     return gray_playlists, gray_playlist_tracks
 
 
+def is_fuzzy_match_album(album1, album2):
+    fuzzy_match = True
+    sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', ' mix', 'rediscovered',
+                       'redux', 'reimagined', 're-imagined', 'reprise', 'stripped']
+    for sk in sketchy_keyword:
+        in_album1 = in_album2 = False
+        for album1_p in parentheticals(album1.name.casefold()):
+            if sk in album1_p:
+                in_album1 = True
+        for album2_p in parentheticals(album2.name.casefold()):
+            if sk in album2_p:
+                in_album2 = True
+        if in_album1 != in_album2:
+            fuzzy_match = False
+            break
+    return fuzzy_match
+
+
+def is_fuzzy_match_artist(gray_obj, search_obj):
+    search_artists = []
+    for artist in search_obj.artists:
+        search_artists.append(artist.name.casefold())
+    if gray_obj.artist.name.casefold() in search_artists:
+        return True
+    else:
+        return False
+
+
+def is_fuzzy_match_track(track1, track2):
+    fuzzy_match = True
+    sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', 'mix', 'rediscovered',
+                       'redux', 'reimagined', 're-imagined', 'reprise', 'stripped', 'ver.', 'version']
+    for sk in sketchy_keyword:
+        in_track1 = in_track2 = False
+        for track1_p in parentheticals(track1.full_name.casefold()):
+            if sk in track1_p:
+                in_track1 = True
+        for track2_p in parentheticals(track2.full_name.casefold()):
+            if sk in track2_p:
+                in_track2 = True
+        if in_track1 != in_track2:
+            fuzzy_match = False
+            break
+    return fuzzy_match
+
+
 def is_valid(args):
     if args.p and not args.r:
         print("WARNING: -p will be ignored since -r was not provided")
@@ -72,6 +118,17 @@ def log_in():
     session = tidalapi.Session()
     session.login_session_file(session_file1)
     return session
+
+
+def parentheticals(string):
+    all_p = []
+    some_p = re.findall(r'\(.*?\)', string)
+    if some_p:
+        all_p.append(some_p)
+    some_p = re.findall(r'\[.*?\]', string)
+    if some_p:
+        all_p.append(some_p)
+    return all_p
 
 
 def playlist_name(playlist):
@@ -236,95 +293,70 @@ def replace_gray_tracks(session, gray_tracks, args):
     return missing, new_stuck, gray_stuck
 
 
-def parentheticals(string):
-    all_p = []
-    some_p = re.findall(r'\(.*?\)', string)
-    if some_p:
-        all_p.append(some_p)
-    some_p = re.findall(r'\[.*?\]', string)
-    if some_p:
-        all_p.append(some_p)
-    return all_p
-
-
-# TODO: Update this function in the style of search_track below
 def search_album(session, gray_album, args):
-    query = gray_album.name + " " + gray_album.artist.name
-    search_albums = session.search(query=query, models=[tidalapi.album.Album])['albums']
-    for search_album in search_albums:
-        if gray_album.name == search_album.name and gray_album.artist.name == search_album.artist.name \
-                and gray_album.audio_quality == search_album.audio_quality:
-            return search_album
-    if args.f:
-        for search_album in search_albums:
-            if gray_album.name.casefold() == search_album.name.casefold() and \
-                    gray_album.artist.name.casefold() == search_album.artist.name.casefold():
-                return search_album
-    return None
+    query = strip_parentheticals(gray_album.name) + " " + gray_album.artist.name
+    search_albums = session.search(query=query, limit=300, models=[tidalapi.album.Album])['albums']
+    score = [0] * len(search_albums)
+    for i, search_album in enumerate(search_albums):
+        if gray_album.name == search_album.name and gray_album.artist.name == search_album.artist.name:
+            score[i] += 64
+        elif args.f and gray_album.name.casefold() == search_album.name.casefold() and \
+                gray_album.artist.name.casefold() == search_album.artist.name.casefold():
+            score[i] = 32
+        elif args.f and strip_parentheticals(gray_album.name.casefold()) == \
+                strip_parentheticals(search_album.name.casefold()) and \
+                is_fuzzy_match_album(gray_album, search_album) and \
+                is_fuzzy_match_artist(gray_album, search_album):
+            score[i] += 16
+            if gray_album.num_tracks == search_album.num_tracks:
+                score[i] += 8
+        if gray_album.explicit == search_album.explicit or gray_album.explicit == search_album.explicit:
+            score[i] += 4
+        if gray_album.audio_quality == search_album.audio_quality:
+            score[i] += 2
+        gray_track = gray_album.tracks()[0]
+        search_track = search_album.tracks()[0]
+        if gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
+                gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
+            score[i] += 1
+    if max(score) >= 16:  # there must at least be a fuzzy match on artist and album to return a match
+        return search_albums[score.index(max(score))]
+    else:
+        return None
 
 
 def search_track(session, gray_track, args):
-    query = gray_track.full_name + " " + gray_track.artist.name
-    search_tracks = session.search(query=query, models=[tidalapi.media.Track])['tracks']
+    query = strip_parentheticals(gray_track.full_name) + " " + gray_track.artist.name
+    search_tracks = session.search(query=query, limit=300, models=[tidalapi.media.Track])['tracks']
     score = [0] * len(search_tracks)
     for i, search_track in enumerate(search_tracks):
         if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name:
-            score[i] += 1000
+            score[i] += 256
         elif args.f and gray_track.full_name.casefold() == search_track.full_name.casefold() and \
                 gray_track.artist.name.casefold() == search_track.artist.name.casefold():
-            score[i] += 500
+            score[i] += 128
         elif args.f and strip_parentheticals(gray_track.full_name.casefold()) == \
-                strip_parentheticals(search_track.full_name.casefold()):
-            valid_name = True
-            sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', 'mix', 'rediscovered',
-                               'redux', 'reimagined', 're-imagined', 'reprise', 'stripped', 'ver.', 'version']
-            for sk in sketchy_keyword:
-                in_gray = in_search = False
-                for gray_p in parentheticals(gray_track.full_name.casefold()):
-                    if sk in gray_p:
-                        in_gray = True
-                for search_p in parentheticals(search_track.full_name.casefold()):
-                    if sk in search_p:
-                        in_search = True
-                if in_gray != in_search:
-                    valid_name = False
-                    break
-            search_artists = []
-            for artist in search_track.artists:
-                search_artists.append(artist.name.casefold())
-            if valid_name and gray_track.artist.name.casefold() in search_artists:
-                score[i] += 250
+                strip_parentheticals(search_track.full_name.casefold()) and \
+                is_fuzzy_match_track(gray_track, search_track) and \
+                is_fuzzy_match_artist(gray_track, search_track):
+            score[i] += 64
         if gray_track.album.name == search_track.album.name:
-            score[i] += 100
+            score[i] += 32
         elif args.f and gray_track.album.name.casefold() == search_track.album.name.casefold():
-            score[i] = 50
+            score[i] = 16
         elif args.f and strip_parentheticals(gray_track.album.name.casefold()) == \
-                strip_parentheticals(search_track.album.name.casefold()):
-            valid_name = True
-            sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', ' mix', 'rediscovered',
-                               'redux', 'reimagined', 're-imagined', 'reprise', 'stripped']
-            for sk in sketchy_keyword:
-                in_gray = in_search = False
-                for gray_p in parentheticals(gray_track.album.name.casefold()):
-                    if sk in gray_p:
-                        in_gray = True
-                for search_p in parentheticals(search_track.album.name.casefold()):
-                    if sk in search_p:
-                        in_search = True
-                if in_gray != in_search:
-                    valid_name = False
-                    break
-            if valid_name:
-                score[i] += 25
+                strip_parentheticals(search_track.album.name.casefold()) and \
+                is_fuzzy_match_album(gray_track.album, search_track.album):
+            score[i] += 8
+            if gray_track.album.num_tracks == search_track.album.num_tracks:
+                score[i] += 4
         if gray_track.explicit == search_track.explicit or gray_track.album.explicit == search_track.album.explicit:
-            score[i] += 10  # if clean/explicit metadata were reliable I'd rank this above album name, but it isn't
+            score[i] += 2  # if clean/explicit metadata were reliable I'd rank this above album name, but it isn't
         if gray_track.audio_quality == search_track.audio_quality and \
-                gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and \
-                gray_track.is_HiRes == search_track.is_HiRes and \
-                gray_track.is_Mqa == search_track.is_Mqa and \
-                gray_track.is_Sony360RA == search_track.is_Sony360RA:
-            score[i] += 5
-    if max(score) >= 250:  # there must at least be a fuzzy match on the artist and track name to return a match
+                gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
+                gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
+            score[i] += 1
+    if max(score) >= 64:  # there must at least be a fuzzy match on artist and track to return a match
         return search_tracks[score.index(max(score))]
     else:
         return None
