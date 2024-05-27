@@ -60,7 +60,11 @@ def find_gray_playlists(session):
 
 
 def is_fuzzy_match_album(album1, album2):
-    fuzzy_match = True
+    if strip_parentheticals(album1.name.casefold()) == strip_parentheticals(album2.name.casefold()):
+        fuzzy_match = True
+    else:
+        fuzzy_match = False
+        return fuzzy_match
     sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', ' mix', 'rediscovered',
                        'redux', 'reimagined', 're-imagined', 'reprise', 'stripped']
     for sk in sketchy_keyword:
@@ -88,7 +92,11 @@ def is_fuzzy_match_artist(gray_obj, search_obj):
 
 
 def is_fuzzy_match_track(track1, track2):
-    fuzzy_match = True
+    if strip_parentheticals(track1.full_name.casefold()) == strip_parentheticals(track2.full_name.casefold()):
+        fuzzy_match = True
+    else:
+        fuzzy_match = False
+        return fuzzy_match
     sketchy_keyword = ['acoustic', 'cover', 'edit)', 'edit]', 'instrumental', 'live', 'mix', 'rediscovered',
                        'redux', 'reimagined', 're-imagined', 'reprise', 'stripped', 'ver.', 'version']
     for sk in sketchy_keyword:
@@ -298,15 +306,10 @@ def search_album(session, gray_album, args):
     search_albums = session.search(query=query, limit=300, models=[tidalapi.album.Album])['albums']
     score = [0] * len(search_albums)
     for i, search_album in enumerate(search_albums):
-        if gray_album.name == search_album.name and gray_album.artist.name == search_album.artist.name:
-            score[i] += 64
-        elif args.f and gray_album.name.casefold() == search_album.name.casefold() and \
+        if gray_album.name.casefold() == search_album.name.casefold() and \
                 gray_album.artist.name.casefold() == search_album.artist.name.casefold():
-            score[i] = 32
-        elif args.f and strip_parentheticals(gray_album.name.casefold()) == \
-                strip_parentheticals(search_album.name.casefold()) and \
-                is_fuzzy_match_album(gray_album, search_album) and \
-                is_fuzzy_match_artist(gray_album, search_album):
+            score[i] += 32
+        elif args.f and is_fuzzy_match_album(gray_album, search_album) and is_fuzzy_match_artist(gray_album, search_album):
             score[i] += 16
             if gray_album.num_tracks == search_album.num_tracks:
                 score[i] += 8
@@ -330,23 +333,14 @@ def search_track(session, gray_track, args):
     search_tracks = session.search(query=query, limit=300, models=[tidalapi.media.Track])['tracks']
     score = [0] * len(search_tracks)
     for i, search_track in enumerate(search_tracks):
-        if gray_track.full_name == search_track.full_name and gray_track.artist.name == search_track.artist.name:
-            score[i] += 256
-        elif args.f and gray_track.full_name.casefold() == search_track.full_name.casefold() and \
+        if gray_track.full_name.casefold() == search_track.full_name.casefold() and \
                 gray_track.artist.name.casefold() == search_track.artist.name.casefold():
-            score[i] += 128
-        elif args.f and strip_parentheticals(gray_track.full_name.casefold()) == \
-                strip_parentheticals(search_track.full_name.casefold()) and \
-                is_fuzzy_match_track(gray_track, search_track) and \
-                is_fuzzy_match_artist(gray_track, search_track):
             score[i] += 64
-        if gray_track.album.name == search_track.album.name:
+        elif args.f and is_fuzzy_match_track(gray_track, search_track) and is_fuzzy_match_artist(gray_track, search_track):
             score[i] += 32
-        elif args.f and gray_track.album.name.casefold() == search_track.album.name.casefold():
+        if gray_track.album.name.casefold() == search_track.album.name.casefold():
             score[i] = 16
-        elif args.f and strip_parentheticals(gray_track.album.name.casefold()) == \
-                strip_parentheticals(search_track.album.name.casefold()) and \
-                is_fuzzy_match_album(gray_track.album, search_track.album):
+        elif args.f and is_fuzzy_match_album(gray_track.album, search_track.album):
             score[i] += 8
             if gray_track.album.num_tracks == search_track.album.num_tracks:
                 score[i] += 4
@@ -356,7 +350,7 @@ def search_track(session, gray_track, args):
                 gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
                 gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
             score[i] += 1
-    if max(score) >= 64:  # there must at least be a fuzzy match on artist and track to return a match
+    if max(score) >= 32:  # there must at least be a fuzzy match on artist and track to return a match
         return search_tracks[score.index(max(score))]
     else:
         return None
