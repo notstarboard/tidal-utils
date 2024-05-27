@@ -313,7 +313,7 @@ def search_album(session, gray_album, args):
             score[i] += 16
             if gray_album.num_tracks == search_album.num_tracks:
                 score[i] += 8
-        if gray_album.explicit == search_album.explicit or gray_album.explicit == search_album.explicit:
+        if gray_album.explicit == search_album.explicit:
             score[i] += 4
         if gray_album.audio_quality == search_album.audio_quality:
             score[i] += 2
