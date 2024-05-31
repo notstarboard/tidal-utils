@@ -339,7 +339,7 @@ def search_track(session, gray_track, args):
         elif args.f and is_fuzzy_match_track(gray_track, search_track) and is_fuzzy_match_artist(gray_track, search_track):
             score[i] += 32
         if gray_track.album.name.casefold() == search_track.album.name.casefold():
-            score[i] = 16
+            score[i] += 16
         elif args.f and is_fuzzy_match_album(gray_track.album, search_track.album):
             score[i] += 8
             if gray_track.album.num_tracks == search_track.album.num_tracks:
