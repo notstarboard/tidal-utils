@@ -350,7 +350,7 @@ def search_track(session, gray_track, args):
                 gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
                 gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
             score[i] += 1
-    if max(score) >= 32:  # there must at least be a fuzzy match on artist and track to return a match
+    if score and max(score) >= 32:  # there must at least be a fuzzy match on artist and track to return a match
         return search_tracks[score.index(max(score))]
     else:
         return None
