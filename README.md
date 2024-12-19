@@ -35,3 +35,7 @@ I'll do my best. Search for any open issues on the Issues tab that match yours, 
 **Can you add X feature or make Y change?**
 
 Maybe. Search for any enhancement requests that match yours on the Issues tab, and create a new issue if none do.
+
+**This was working fine but now I'm getting an error about is_DolbyAtmos. How do I fix it?**
+
+There were some changes to the track metadata in tidalapi. Pull the newest code from this repository using `git pull` and update tidalapi using `pip install tidalapi -U', and that should solve your problem. 

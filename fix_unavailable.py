@@ -15,6 +15,8 @@ def build_parser():
                         action='store_true', required=False, default=False)
     parser.add_argument("-r", help="Attempt to REPLACE any unavailable Tracks and Albums in My Collection.",
                         action='store_true', required=False, default=False)
+    parser.add_argument("-p", help="-p is deprecated and will be removed in the future. Running with -r is now sufficient to replace songs in playlists.",
+                        action='store_true', required=False, default=False)
     return parser
 
 
@@ -313,7 +315,7 @@ def search_album(session, gray_album, args):
             score[i] += 2
         gray_track = gray_album.tracks()[0]
         search_track = search_album.tracks()[0]
-        if gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
+        if gray_track.is_dolby_atmos == search_track.is_dolby_atmos and gray_track.is_hi_res_lossless == search_track.is_hi_res_lossless and \
                 gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
             score[i] += 1
     if max(score) >= 16:  # there must at least be a fuzzy match on artist and album to return a match
@@ -341,8 +343,8 @@ def search_track(session, gray_track, args):
         if gray_track.explicit == search_track.explicit or gray_track.album.explicit == search_track.album.explicit:
             score[i] += 2  # if clean/explicit metadata were reliable I'd rank this above album name, but it isn't
         if gray_track.audio_quality == search_track.audio_quality and \
-                gray_track.is_DolbyAtmos == search_track.is_DolbyAtmos and gray_track.is_HiRes == search_track.is_HiRes and \
-                gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
+                gray_track.is_dolby_atmos == search_track.is_dolby_atmos and gray_track.is_hi_res_lossless == search_track.is_hi_res_lossless and \
+                gray_track.is_lossless == search_track.is_lossless:
             score[i] += 1
     if score and max(score) >= 32:  # there must at least be a fuzzy match on artist and track to return a match
         return search_tracks[score.index(max(score))]
