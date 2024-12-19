@@ -316,7 +316,7 @@ def search_album(session, gray_album, args):
         gray_track = gray_album.tracks()[0]
         search_track = search_album.tracks()[0]
         if gray_track.is_dolby_atmos == search_track.is_dolby_atmos and gray_track.is_hi_res_lossless == search_track.is_hi_res_lossless and \
-                gray_track.is_Mqa == search_track.is_Mqa and gray_track.is_Sony360RA == search_track.is_Sony360RA:
+                gray_track.is_lossless == search_track.is_lossless:
             score[i] += 1
     if max(score) >= 16:  # there must at least be a fuzzy match on artist and album to return a match
         return search_albums[score.index(max(score))]
