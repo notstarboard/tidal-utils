@@ -1,9 +1,5 @@
 # === fix_unavailable.py ===
-#
 # This program will identify, and optionally replace, unavailable albums and tracks in your TIDAL library.
-# It can also optionally replace unavailable songs in playlists you've created, but be aware that the
-# replacement tracks will be added to the very end of the playlist.
-#
 # See README.md for key details and usage information.
 
 import argparse
@@ -16,8 +12,6 @@ def build_parser():
     parser = argparse.ArgumentParser(
         description="Identify unavailable Tracks and Albums in My Collection and attempt to replace them if desired")
     parser.add_argument("-f", help="Be more FLEXIBLE when matching metadata during replacement.",
-                        action='store_true', required=False, default=False)
-    parser.add_argument("-p", help="Extend replacements to user-created PLAYLISTS. Replaced songs will be added to the end.",
                         action='store_true', required=False, default=False)
     parser.add_argument("-r", help="Attempt to REPLACE any unavailable Tracks and Albums in My Collection.",
                         action='store_true', required=False, default=False)
@@ -114,8 +108,8 @@ def is_fuzzy_match_track(track1, track2):
 
 
 def is_valid(args):
-    if args.p and not args.r:
-        print("WARNING: -p will be ignored since -r was not provided")
+    if args.p:
+        print("WARNING: -p is deprecated. Running with -r is now sufficient to replace songs in playlists")
     if args.f and not args.r:
         print("WARNING: -f will be ignored since -r was not provided")
     return True
@@ -265,11 +259,11 @@ def replace_gray_playlists(session, gray_playlists, args):
     for playlist in gray_playlists:
         perfect = True
         playlist_tracks = playlist.tracks()
-        for playlist_track in playlist_tracks:
+        for i, playlist_track in enumerate(playlist_tracks):
             if not playlist_track.available:
                 match_track = search_track(session, playlist_track, args)
                 if match_track:
-                    if playlist.add([match_track.id]):
+                    if playlist.add(media_ids=[match_track.id], position=i):
                         if not playlist.remove_by_id(playlist_track.id):
                             gray_stuck.append(playlist_track)
                             perfect = False
@@ -384,10 +378,9 @@ def main():
         print_replaced_albums(len(gray_albums), missing, new_stuck, gray_stuck)
         missing, new_stuck, gray_stuck = replace_gray_tracks(session, gray_tracks, args)
         print_replaced_tracks(len(gray_tracks), missing, new_stuck, gray_stuck)
-        if args.p:
-            imperfect_playlists, missing, new_stuck, gray_stuck = replace_gray_playlists(session, gray_playlists, args)
-            print_replaced_playlists(len(gray_playlists), len(gray_playlist_tracks),
-                                     missing, new_stuck, gray_stuck, imperfect_playlists)
+        imperfect_playlists, missing, new_stuck, gray_stuck = replace_gray_playlists(session, gray_playlists, args)
+        print_replaced_playlists(len(gray_playlists), len(gray_playlist_tracks),
+                                 missing, new_stuck, gray_stuck, imperfect_playlists)
 
 
 if __name__ == '__main__':
