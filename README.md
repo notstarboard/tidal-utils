@@ -38,4 +38,4 @@ Maybe. Search for any enhancement requests that match yours on the Issues tab, a
 
 **This was working fine but now I'm getting an error about is_DolbyAtmos. How do I fix it?**
 
-There were some changes to the track metadata in tidalapi. Pull the newest code from this repository using `git pull` and update tidalapi using `pip install tidalapi -U', and that should solve your problem. 
+There were some changes to the track metadata in tidalapi. Pull the newest code from this repository using `git pull` and update tidalapi using `pip install tidalapi -U`, and that should solve your problem. 
