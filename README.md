@@ -1,6 +1,6 @@
 # tidal-utils
 
-Are you tired of having to manually maintain your TIDAL music library when tracks become unavailable? Me too. Thankfully, you've come to the right place! `fix_unavailable.py` will identify, and optionally try to replace, unvailable albums and tracks in your TIDAL Collection.
+Are you tired of having to manually maintain your TIDAL music library when tracks become unavailable? Me too. Thankfully, you've come to the right place! `fix_unavailable.py` will identify, and optionally try to replace, unavailable albums and tracks in your TIDAL Collection.
 
 WARNING: Use this program at your own risk. While I have tested this code on my own library without incident, using the `-r` flag will instruct the program to add and remove tracks and albums from your TIDAL library. So, I highly recommend you save a backup of your library before running with the `-r` flag in case it doesn't behave as you would expect.
 
