@@ -380,7 +380,7 @@ def main():
         print_replaced_albums(len(gray_albums), missing, new_stuck, gray_stuck)
         missing, new_stuck, gray_stuck = replace_gray_tracks(session, gray_tracks, args)
         print_replaced_tracks(len(gray_tracks), missing, new_stuck, gray_stuck)
-        imperfect_playlists, missing, new_stuck, gray_stuck = replace_gray_playlists(session, gray_playlists, args)
+        missing, new_stuck, gray_stuck, imperfect_playlists = replace_gray_playlists(session, gray_playlists, args)
         print_replaced_playlists(len(gray_playlists), len(gray_playlist_tracks),
                                  missing, new_stuck, gray_stuck, imperfect_playlists)
 
