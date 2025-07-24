@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 import re
 import tidalapi
+from tidalapi.types import ItemOrder
 
 
 def build_parser():
@@ -22,7 +23,7 @@ def build_parser():
 
 def find_gray_albums(session):
     gray_albums = []
-    albums = session.user.favorites.albums(limit=9999)
+    albums = session.user.favorites.albums(limit=9999, order=ItemOrder.Artist)
     for album in albums:
         if not album.available:
             gray_albums.append(album)
@@ -31,7 +32,7 @@ def find_gray_albums(session):
 
 def find_gray_tracks(session):
     gray_tracks = []
-    tracks = session.user.favorites.tracks(limit=9999, order="ARTIST")
+    tracks = session.user.favorites.tracks(limit=9999, order=ItemOrder.Artist)
     for track in tracks:
         if not track.available:
             gray_tracks.append(track)
