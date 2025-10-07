@@ -1,6 +1,8 @@
 # tidal-utils
 
-Are you tired of having to manually maintain your TIDAL music library when tracks become unavailable? Me too. Thankfully, you've come to the right place! `fix_unavailable.py` will identify, and optionally try to replace, unavailable albums and tracks in your TIDAL Collection.
+Are you tired of having to manually maintain your TIDAL Collection when tracks become unavailable? Me too. Thankfully, you've come to the right place! `fix_unavailable.py` will identify, and optionally try to replace, unavailable albums and tracks in your TIDAL Collection.
+
+If you've noticed that songs are falling out of your TIDAL Collection entirely, you can back up your collection now with `backup.py` and then use `compare_backups.py` in the future to identify any tracks or albums that leaked out. This behavior started for tracks and albums in Summer 2025. Tracks in playlists that drop off TIDAL still become unavailable as before, though, and can be cleaned up with `fix_unavailable.py`.
 
 WARNING: Use this program at your own risk. While I have tested this code on my own library without incident, using the `-r` flag will instruct the program to add and remove tracks and albums from your TIDAL library. So, I highly recommend you save a backup of your library before running with the `-r` flag in case it doesn't behave as you would expect.
 
@@ -11,10 +13,13 @@ This code relies on the tidalapi module. Installation instructions and other doc
 Usage example:
 
 `python3 /path/to/fix_unavailable.py -r -f`
+`python3 /path/to/compare_backups.py /path/to/backup_old.pkl /path/to/backup_new.pkl`
+`python3 /path/to/backup.py`
 
 For help, run: 
 
 `python3 /path/to/fix_unavailable.py -h`
+`python3 /path/to/compare_backups.py -h`
 
 ### FAQ
 
