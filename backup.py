@@ -1,15 +1,9 @@
+# === backup.py ===
 # A quick and dirty way to back up your Python library to a file
-#
-from pathlib import Path
+
+from fix_unavailable import log_in
+from datetime import datetime
 import pickle
-import tidalapi
-
-
-def log_in():
-    session_file1 = Path("tidal-session-oauth.json")
-    session = tidalapi.Session()
-    session.login_session_file(session_file1)
-    return session
 
 
 def back_up(session, filename):
@@ -32,7 +26,8 @@ def load_backup(filename):
 
 def main():
     session = log_in()
-    backup_name = 'library_backup.pkl'
+    date_suffix = datetime.today().strftime('%Y-%m-%d_%H%M%S')
+    backup_name = 'library_backup_' + date_suffix + '.pkl'
     back_up(session, backup_name)
 
 
