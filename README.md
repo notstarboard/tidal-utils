@@ -13,12 +13,15 @@ This code relies on the tidalapi module. Installation instructions and other doc
 Usage example:
 
 `python3 /path/to/fix_unavailable.py -r -f`
+
 `python3 /path/to/compare_backups.py /path/to/backup_old.pkl /path/to/backup_new.pkl`
+
 `python3 /path/to/backup.py`
 
 For help, run: 
 
 `python3 /path/to/fix_unavailable.py -h`
+
 `python3 /path/to/compare_backups.py -h`
 
 ### FAQ
