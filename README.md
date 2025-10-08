@@ -4,7 +4,7 @@ Are you tired of having to manually maintain your TIDAL Collection when tracks b
 
 If you've noticed that songs are falling out of your TIDAL Collection entirely, you can back up your collection now with `backup.py` and then use `compare_backups.py` in the future to identify any tracks or albums that leaked out. This behavior started for tracks and albums in Summer 2025. Tracks in playlists that drop off TIDAL still become unavailable as before, though, and can be cleaned up with `fix_unavailable.py`.
 
-WARNING: Use this program at your own risk. While I have tested this code on my own library without incident, using the `-r` flag will instruct the program to add and remove tracks and albums from your TIDAL library. So, I highly recommend you save a backup of your library before running with the `-r` flag in case it doesn't behave as you would expect.
+WARNING: Use this program at your own risk. While I have tested this code on my own library without incident, using `fix_unavailable.py` with the `-r` flag will instruct the program to add and remove tracks and albums from your TIDAL Collection. So, I highly recommend you save a backup of your Collection before running `fix_unavailable.py` with the `-r` flag in case it doesn't behave as you would expect.
 
 Prerequisites: 
 
