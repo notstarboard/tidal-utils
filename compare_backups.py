@@ -44,7 +44,7 @@ def print_removed_tracks(removed_tracks):
         print("None")
     else:
         for track in removed_tracks:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
     print()
     
 
@@ -65,7 +65,7 @@ def compare_tracks(tracks_old, tracks_new):
     for track_old in tracks_old:
         for i, track_new in enumerate(tracks_new):
             # Search criteria can be simple here because in theory anything already in our library won't have changed
-            if track_old.full_name.casefold() == track_new.full_name.casefold() and \
+            if track_old.name.casefold() == track_new.name.casefold() and \
                     track_old.artist.name.casefold() == track_new.artist.name.casefold():
                 break
             elif i == len(tracks_new) - 1:
