@@ -89,7 +89,7 @@ def is_fuzzy_match_artist(gray_obj, search_obj):
 
 
 def is_fuzzy_match_track(track1, track2):
-    if strip_parentheticals(track1.full_name.casefold()) == strip_parentheticals(track2.full_name.casefold()):
+    if strip_parentheticals(track1.name.casefold()) == strip_parentheticals(track2.name.casefold()):
         fuzzy_match = True
     else:
         fuzzy_match = False
@@ -98,10 +98,10 @@ def is_fuzzy_match_track(track1, track2):
                        'redux', 'reimagined', 're-imagined', 'reprise', 'stripped', 'ver.', 'version']
     for sk in sketchy_keyword:
         in_track1 = in_track2 = False
-        for track1_p in parentheticals(track1.full_name.casefold()):
+        for track1_p in parentheticals(track1.name.casefold()):
             if sk in track1_p:
                 in_track1 = True
-        for track2_p in parentheticals(track2.full_name.casefold()):
+        for track2_p in parentheticals(track2.name.casefold()):
             if sk in track2_p:
                 in_track2 = True
         if in_track1 != in_track2:
@@ -157,7 +157,7 @@ def print_replaced_albums(num_gray_albums, missing, new_stuck, gray_stuck):
     if gray_stuck:
         print("> Tracks that had a replacement successfully added, but which could not be removed due to an error:")
         for track in gray_stuck:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print("\n")
 
 
@@ -174,19 +174,19 @@ def print_replaced_playlists(num_gray_playlists, num_gray_playlist_tracks, missi
     if missing:
         print("> Tracks present in user-created playlists that do not appear to have an updated version on TIDAL:")
         for track in missing:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
     if new_stuck:
         print("> Tracks present in user-created playlists that appear to have an updated version on TIDAL which could "
               + "not be added due to an error:")
         for track in new_stuck:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
     if gray_stuck:
         print("> Tracks present in user-created playlists that had a replacement successfully added, but which could "
               + "not be removed due to an error:")
         for track in gray_stuck:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
 
 
@@ -196,17 +196,17 @@ def print_replaced_tracks(num_gray_tracks, missing, new_stuck, gray_stuck):
     if missing:
         print("> Tracks that do not appear to have an updated version on TIDAL:")
         for track in missing:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
     if new_stuck:
         print("> Tracks that appear to have an updated version on TIDAL which could not be added due to an error:")
         for track in new_stuck:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
     if gray_stuck:
         print("> Tracks that had a replacement successfully added, but which could not be removed due to an error:")
         for track in gray_stuck:
-            print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+            print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
         print()
 
 
@@ -231,7 +231,7 @@ def print_gray_playlists(gray_playlists):
 def print_gray_tracks(gray_tracks):
     print("Unavailable tracks in My Collection:\n")
     for track in gray_tracks:
-        print("{}: '{}' by '{}'".format(track.id, track.full_name, track.artist.name))
+        print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
     if not gray_tracks:
         print("None")
     print()
@@ -326,11 +326,11 @@ def search_album(session, gray_album, args):
 
 
 def search_track(session, gray_track, args):
-    query = strip_parentheticals(gray_track.full_name) + " " + gray_track.artist.name
+    query = strip_parentheticals(gray_track.name) + " " + gray_track.artist.name
     search_tracks = session.search(query=query, limit=300, models=[tidalapi.media.Track])['tracks']
     score = [0] * len(search_tracks)
     for i, search_track in enumerate(search_tracks):
-        if gray_track.full_name.casefold() == search_track.full_name.casefold() and \
+        if gray_track.name.casefold() == search_track.name.casefold() and \
                 gray_track.artist.name.casefold() == search_track.artist.name.casefold():
             score[i] += 64
         elif args.f and is_fuzzy_match_track(gray_track, search_track) and is_fuzzy_match_artist(gray_track, search_track):
