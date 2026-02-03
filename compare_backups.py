@@ -27,9 +27,6 @@ def compare_backups(args, backup_old, backup_new):
     except:
         legacy_format = True
         [tracks_new, albums_new, playlists_new] = load_backup(backup_new)
-    if legacy_format:
-        print("\nINFO: At least one backup uses the old format, which didn't explicitly save playlist tracks.", \
-              "Therefore playlist tracks will not be compared.\n")
     removed_albums = compare_albums(albums_old, albums_new)
     if removed_albums:
         removed_albums.sort(key=lambda x: (x.artist.name, x.album.name))
@@ -38,7 +35,10 @@ def compare_backups(args, backup_old, backup_new):
     if removed_tracks:
         removed_tracks.sort(key=lambda x: (x.artist.name, x.album.name))
     print_removed_tracks(removed_tracks)
-    if not legacy_format:
+    if legacy_format:
+        print("\nINFO: At least one backup uses the old format, which didn't explicitly save playlist tracks.", \
+              "Therefore playlist tracks will not be compared.\n")
+    else:
         removed_playlist_tracks, corresp_playlists, imperfect_playlists = \
             compare_playlists(playlists_old, playlists_new, playlist_tracks_old, playlist_tracks_new)
         print_removed_playlist_tracks(removed_playlist_tracks, corresp_playlists, imperfect_playlists)
