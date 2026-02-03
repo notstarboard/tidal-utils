@@ -358,6 +358,11 @@ def strip_parentheticals(string):
 
 
 def main():
+    print("\nINFO: Starting in Summer 2025, missing tracks started silently falling out of TIDAL Collections rather than getting greyed out.",
+          "That prevents this script from working, as it can't find replacements for songs it doesn't know are in your library.",
+          "I would recommend you submit feedback to Tidal about how annoying this is, then switch to compare_backups.py as a workaround.",
+          "See issue #19 on GitHub for more details.\n")
+    
     # Read and validate the command line arguments
     parser = build_parser()
     args = parser.parse_args()
