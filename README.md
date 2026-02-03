@@ -2,7 +2,7 @@
 
 Are you tired of content silently leaking out of your TIDAL Collection? Me too. Thankfully, you've come to the right place! You can back up your collection now with `backup.py` and then use `compare_backups.py` in the future to identify any tracks, albums, or playlist tracks that may have leaked out.
 
-Also, if you've noticed you have tracks, albums, or playlists in your TIDAL Collection that are greyed out and no longer playable, `fix_unavailable.py` will identify them and optionally try to replace them.
+Also, if you've noticed you have tracks, albums, or playlist tracks in your TIDAL Collection that are greyed out and no longer playable, `fix_unavailable.py` will identify them and optionally try to replace them.
 
 WARNING: Use `fix_unavailable.py` at your own risk. While I have tested it on my own library without incident, using the `-r` flag will instruct it to add and remove tracks and albums from your TIDAL Collection. So, I highly recommend you save a backup of your Collection with `backup.py` before running `fix_unavailable.py` with the `-r` flag in case it doesn't behave as you would expect.
 
