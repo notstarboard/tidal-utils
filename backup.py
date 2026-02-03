@@ -10,10 +10,14 @@ def back_up(session, filename):
     tracks = session.user.favorites.tracks(limit=9999)
     albums = session.user.favorites.albums(limit=9999)
     playlists = session.user.playlists()
+    playlist_tracks = []
+    for playlist in playlists:
+        playlist_tracks.append(playlist.tracks()) 
     with open(filename, 'wb') as backup_file:
         pickle.dump(tracks, backup_file)
         pickle.dump(albums, backup_file)
         pickle.dump(playlists, backup_file)
+        pickle.dump(playlist_tracks, backup_file)
 
 
 def load_backup(filename):
@@ -21,7 +25,11 @@ def load_backup(filename):
         tracks = pickle.load(backup_file)
         albums = pickle.load(backup_file)
         playlists = pickle.load(backup_file)
-    return tracks, albums, playlists
+        try:
+            playlist_tracks = pickle.load(backup_file)
+            return tracks, albums, playlists, playlist_tracks
+        except:
+            return tracks, albums, playlists
 
 
 def main():

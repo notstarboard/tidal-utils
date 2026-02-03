@@ -16,16 +16,32 @@ def build_parser():
 
 
 def compare_backups(args, backup_old, backup_new):
-    [tracks_old, albums_old, _] = load_backup(backup_old)
-    [tracks_new, albums_new, _] = load_backup(backup_new)
+    legacy_format = False # Avoid errors if folks compare backups without playlist tracks
+    try:
+        [tracks_old, albums_old, playlists_old, playlist_tracks_old] = load_backup(backup_old)
+    except:
+        legacy_format = True
+        [tracks_old, albums_old, playlists_old] = load_backup(backup_old)
+    try:
+        [tracks_new, albums_new, playlists_new, playlist_tracks_new] = load_backup(backup_new)
+    except:
+        legacy_format = True
+        [tracks_new, albums_new, playlists_new] = load_backup(backup_new)
     removed_albums = compare_albums(albums_old, albums_new)
-    removed_tracks = compare_tracks(tracks_old, tracks_new)
     if removed_albums:
         removed_albums.sort(key=lambda x: (x.artist.name, x.album.name))
     print_removed_albums(removed_albums)
+    removed_tracks = compare_tracks(tracks_old, tracks_new)
     if removed_tracks:
         removed_tracks.sort(key=lambda x: (x.artist.name, x.album.name))
     print_removed_tracks(removed_tracks)
+    if legacy_format:
+        print("\nINFO: At least one backup uses the old format, which didn't explicitly save playlist tracks.", \
+              "Therefore playlist tracks will not be compared.\n")
+    else:
+        removed_playlist_tracks, corresp_playlists, imperfect_playlists = \
+            compare_playlists(playlists_old, playlists_new, playlist_tracks_old, playlist_tracks_new)
+        print_removed_playlist_tracks(removed_playlist_tracks, corresp_playlists, imperfect_playlists)
     
         
 def print_removed_albums(removed_albums):
@@ -47,14 +63,30 @@ def print_removed_tracks(removed_tracks):
             print("{}: '{}' by '{}'".format(track.id, track.name, track.artist.name))
     print()
     
+    
+def print_removed_playlist_tracks(removed_playlist_tracks, corresp_playlists, imperfect_playlists):
+    print("Playlists with at least one song changed to 'Unavailable' by 'Unknown Artist':\n")
+    if not imperfect_playlists:
+        print("None")
+    else:
+        for playlist in imperfect_playlists:
+            print(playlist.name)
+    print("\nPlaylisted tracks present in old backup & not present in new backup (match: playlist, name, artist):\n")
+    if not removed_playlist_tracks:
+        print("None")
+    else:
+        for i, track in enumerate(removed_playlist_tracks):
+            print("{}: '{}' by '{}' in '{}'".format(track.id, track.name, track.artist.name, corresp_playlists[i].name))
+    print()
+    
 
 def compare_albums(albums_old, albums_new):    
     removed_albums = []
     for album_old in albums_old:
         for i, album_new in enumerate(albums_new):
             # Search criteria can be simple here because in theory anything already in our library won't have changed
-            if album_old.name.casefold() == album_new.name.casefold() and \
-                    album_old.artist.name.casefold() == album_new.artist.name.casefold():
+            if album_old.name == album_new.name and \
+                    album_old.artist.name == album_new.artist.name:
                 break
             elif i == len(albums_new) - 1:
                 removed_albums.append(album_old)
@@ -65,12 +97,41 @@ def compare_tracks(tracks_old, tracks_new):
     for track_old in tracks_old:
         for i, track_new in enumerate(tracks_new):
             # Search criteria can be simple here because in theory anything already in our library won't have changed
-            if track_old.name.casefold() == track_new.name.casefold() and \
-                    track_old.artist.name.casefold() == track_new.artist.name.casefold():
+            if track_old.name == track_new.name and \
+                    track_old.artist.name == track_new.artist.name:
                 break
             elif i == len(tracks_new) - 1:
                 removed_tracks.append(track_old)
     return removed_tracks
+
+
+def compare_playlists(playlists_old, playlists_new, playlist_tracks_old, playlist_tracks_new):
+    removed_playlist_tracks = []
+    corresp_playlists = []
+    imperfect_playlists = []
+    # Results in outputs being usefully sorted, which makes life easier
+    playlists_old.sort(key=lambda x: x.name)
+    for playlist_old in playlists_old:
+        for i, playlist_new in enumerate(playlists_new):
+            # If the entire playlist was deleted, there's no reason to flag it; songs are removed without warning, not playlists
+            if playlist_old.id == playlist_new.id:
+                # Track playlists with unavailable songs for those using this tool for cleanups
+                for playlist_track_new in playlist_tracks_new[i]:
+                    if playlist_track_new.name == "Unavailable" and \
+                        playlist_track_new.artist.name == "Unknown Artist":
+                            imperfect_playlists.append(playlist_new)
+                            break
+                for playlist_track_old in playlist_tracks_old[i]:
+                    for ii, playlist_track_new in enumerate(playlist_tracks_new[i]):
+                        # Search criteria can be simple here because in theory anything already in our library won't have changed
+                        if playlist_track_old.name == playlist_track_new.name and \
+                            playlist_track_old.artist.name == playlist_track_new.artist.name:
+                                break
+                        elif ii == len(playlist_tracks_new[i]) - 1:
+                            corresp_playlists.append(playlist_old)
+                            removed_playlist_tracks.append(playlist_track_old)
+                break
+    return removed_playlist_tracks, corresp_playlists, imperfect_playlists
 
 
 def main():
