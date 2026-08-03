@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+.venv/
+venv/
+tidal-session-oauth.json
+library_backup_*.json
+library_backup_*.pkl
+tidal_repair_*.json
+tidal_restore_*.json

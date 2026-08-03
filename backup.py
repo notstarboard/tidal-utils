@@ -1,43 +1,22 @@
-# === backup.py ===
-# A quick and dirty way to back up your Python library to a file
+"""Compatibility wrapper for the historic backup.py entry point."""
 
-from fix_unavailable import log_in
-from datetime import datetime
-import pickle
+from __future__ import annotations
+
+from tidal_utils.backup import create_backup, load_backup, save_backup, snapshot_from_session
+from tidal_utils.client import log_in
+
+__all__ = ["back_up", "create_backup", "load_backup", "log_in", "main", "save_backup", "snapshot_from_session"]
 
 
 def back_up(session, filename):
-    tracks = session.user.favorites.tracks(limit=9999)
-    albums = session.user.favorites.albums(limit=9999)
-    playlists = session.user.playlists()
-    playlist_tracks = []
-    for playlist in playlists:
-        playlist_tracks.append(playlist.tracks()) 
-    with open(filename, 'wb') as backup_file:
-        pickle.dump(tracks, backup_file)
-        pickle.dump(albums, backup_file)
-        pickle.dump(playlists, backup_file)
-        pickle.dump(playlist_tracks, backup_file)
+    """Create a JSON backup at *filename* using the legacy function name."""
+    return save_backup(snapshot_from_session(session), filename)
 
 
-def load_backup(filename):
-    with open(filename, 'rb') as backup_file:
-        tracks = pickle.load(backup_file)
-        albums = pickle.load(backup_file)
-        playlists = pickle.load(backup_file)
-        try:
-            playlist_tracks = pickle.load(backup_file)
-            return tracks, albums, playlists, playlist_tracks
-        except:
-            return tracks, albums, playlists
+def main() -> None:
+    path = create_backup(log_in())
+    print(path)
 
 
-def main():
-    session = log_in()
-    date_suffix = datetime.today().strftime('%Y-%m-%d_%H%M%S')
-    backup_name = 'library_backup_' + date_suffix + '.pkl'
-    back_up(session, backup_name)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,43 +1,195 @@
 # tidal-utils
 
-Are you tired of content silently leaking out of your TIDAL Collection? Me too. Thankfully, you've come to the right place! You can back up your collection now with `backup.py` and then use `compare_backups.py` in the future to identify any tracks, albums, or playlist tracks that may have leaked out.
+`tidal-utils` backs up a TIDAL collection, compares snapshots, finds unavailable content, previews safe replacements, and restores missing favorites or playlist entries.
 
-Also, if you've noticed you have tracks, albums, or playlist tracks in your TIDAL Collection that are greyed out and no longer playable, `fix_unavailable.py` will identify them and optionally try to replace them.
+The project uses the unofficial [`tidalapi`](https://github.com/tamland/python-tidal) client. TIDAL can change private APIs or metadata without notice, so review every repair or restore preview before applying it.
 
-WARNING: Use `fix_unavailable.py` at your own risk. While I have tested it on my own library without incident, using the `-r` flag will instruct it to add and remove tracks and albums from your TIDAL Collection. So, I highly recommend you save a backup of your Collection with `backup.py` before running `fix_unavailable.py` with the `-r` flag in case it doesn't behave as you would expect.
+## Highlights
 
-Prerequisites: 
+- Versioned, human-readable JSON backups instead of fragile Python object pickles
+- Correct handling of empty libraries, duplicates, reordered playlists, and deleted playlists
+- Text, JSON, CSV, and HTML diff reports
+- Repair and restore commands that are dry-run by default
+- Match confidence, optional fuzzy matching, interactive selection, retries, and operation logs
+- Legacy script entry points and trusted-pickle migration
+- Automated tests and CI across supported Python versions
 
-This code relies on the tidalapi module. Installation instructions and other documentation can be found on its [GitHub page](https://github.com/tamland/python-tidal).
+## Install
 
-Usage example:
+Python 3.10 or newer is required.
 
-`python3 /path/to/backup.py`
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install .
+```
 
-`python3 /path/to/compare_backups.py /path/to/backup_old.pkl /path/to/backup_new.pkl`
+For development:
 
-`python3 /path/to/fix_unavailable.py -r -f`
+```bash
+python -m pip install -e ".[dev]"
+pytest
+ruff check .
+```
 
-For help and more details, run:
+The first command that connects to TIDAL creates or refreshes `tidal-session-oauth.json` through `tidalapi`. The session file and generated backups are ignored by Git.
 
-`python3 /path/to/compare_backups.py -h`
+## Commands
 
-`python3 /path/to/fix_unavailable.py -h`
+### Back up the library
 
-### FAQ
+```bash
+tidal-utils backup
+```
 
-**I don't know how to run Python code. How do I even use this?**
+Choose an output folder and retain only the newest ten generated backups:
 
-The first three sections of this [guide](https://www.freecodecamp.org/news/the-python-guide-for-beginners/) will get you up and running! You will still need to install the tidalapi module as called out above, but that's all there is to it.
+```bash
+tidal-utils backup --output-dir backups --retain 10
+```
 
-**Can you add X feature or make Y change?**
+Backups use a versioned JSON structure with tracks, albums, and each playlist's own ordered track list. Writes are atomic, so an interrupted process does not leave a half-written destination file.
 
-Maybe. Search for any enhancement requests that match yours on the Issues tab, and create a new issue if none do.
+### Compare backups
 
-**This was working fine but now I'm getting a strange error. How do I fix it?**
+```bash
+tidal-utils compare backups/old.json backups/new.json
+```
 
-There were probably some changes made to the track metadata in tidalapi. Pull the newest code from this repository using `git pull` and update tidalapi using `pip install tidalapi -U`. That will most likely solve your problem.
+Omit the second path to create a fresh backup before comparing:
 
-**Something is actually broken. Can you fix it?**
+```bash
+tidal-utils compare backups/old.json
+```
 
-I'll do my best. Search for any open issues on the Issues tab that match yours, and create a new issue if none do. I'll take a look at it when I can.
+Write a report:
+
+```bash
+tidal-utils compare old.json new.json --report diff.html
+tidal-utils compare old.json new.json --report diff.csv
+tidal-utils compare old.json new.json --format json
+```
+
+The comparison detects:
+
+- Added and removed favorite tracks and albums
+- Duplicate-count changes
+- Added and removed playlists
+- Added and removed playlist tracks
+- Playlist order changes
+- Entries that became unavailable
+
+The command exits with status `1` when differences are found, which makes it useful in scheduled jobs.
+
+### Migrate a legacy pickle
+
+Pickle can execute code while loading. Only migrate a backup you created and trust.
+
+```bash
+tidal-utils migrate library_backup_old.pkl library_backup_old.json
+```
+
+The `compare` and `restore` commands also accept `--allow-unsafe-pickle` for trusted legacy files.
+
+### Scan unavailable items
+
+```bash
+tidal-utils scan
+tidal-utils scan --json
+```
+
+### Preview and repair unavailable items
+
+A repair is always a preview unless `--apply` is explicitly supplied:
+
+```bash
+tidal-utils repair
+tidal-utils repair --fuzzy --min-confidence 0.65
+tidal-utils repair --fuzzy --interactive
+tidal-utils repair --fuzzy --apply
+```
+
+The preview shows the original item, proposed replacement, confidence, and match reasons. Applied repairs write a timestamped JSON operation log. A replacement is added before the unavailable item is removed; failures are recorded rather than silently ignored.
+
+`--interactive` lets you choose among the highest-ranked candidates when no candidate meets the threshold or top candidates tie.
+
+### Preview and restore a backup
+
+Restore missing favorite tracks and albums:
+
+```bash
+tidal-utils restore backups/library.json
+```
+
+Include playlists, preserving duplicate entries and positions where possible:
+
+```bash
+tidal-utils restore backups/library.json --include-playlists
+```
+
+Apply the displayed plan:
+
+```bash
+tidal-utils restore backups/library.json --include-playlists --apply
+```
+
+Restore uses saved TIDAL IDs. An item may fail if TIDAL has retired that exact ID; the result is recorded in the restore log.
+
+## Compatibility scripts
+
+The original entry points remain available:
+
+```bash
+python backup.py
+python compare_backups.py old.json new.json
+python fix_unavailable.py -f       # preview
+python fix_unavailable.py -f -r    # apply
+```
+
+New integrations should prefer the `tidal-utils` command and imports under `tidal_utils`.
+
+## Backup format
+
+A shortened example:
+
+```json
+{
+  "format_version": 1,
+  "created_at": "2026-08-03T16:00:00+00:00",
+  "tracks": [
+    {
+      "id": "123",
+      "title": "Track",
+      "artists": ["Artist"],
+      "album": "Album",
+      "available": true,
+      "explicit": false,
+      "audio_quality": "HI_RES_LOSSLESS",
+      "isrc": "USABC1234567"
+    }
+  ],
+  "albums": [],
+  "playlists": [
+    {
+      "id": "playlist-id",
+      "title": "Favorites",
+      "description": "",
+      "tracks": []
+    }
+  ]
+}
+```
+
+The `format_version` field allows future migrations without relying on serialized `tidalapi` classes.
+
+## Safety notes
+
+- Back up before applying repairs or restores.
+- Inspect previews and confidence values.
+- Use fuzzy matching carefully around live, acoustic, remix, edit, instrumental, and alternate-version metadata.
+- Never open an untrusted pickle backup.
+- Operation logs document attempted changes, but they are not a guaranteed automatic undo mechanism because TIDAL IDs can disappear.
+
+## License
+
+MIT
