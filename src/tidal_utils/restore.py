@@ -11,6 +11,7 @@ from .backup import snapshot_from_session
 from .client import retry
 from .compare import compare_libraries
 from .models import LibraryBackup, normalize_text
+from .security import redact_sensitive, safe_display, secure_write_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,8 +55,8 @@ def format_restore_plan(plan: list[RestoreAction]) -> str:
     if not plan:
         return "The current library already contains every selected backup item.\n"
     return "\n".join(
-        f"{action.kind}: {action.title} [{action.id}]"
-        + (f" in '{action.playlist}' at position {action.position}" if action.playlist else "")
+        f"{action.kind}: {safe_display(action.title)} [{safe_display(action.id)}]"
+        + (f" in '{safe_display(action.playlist)}' at position {action.position}" if action.playlist else "")
         for action in plan
     ) + "\n"
 
@@ -87,19 +88,18 @@ def apply_restore_plan(session: Any, plan: list[RestoreAction], attempts: int = 
                 raise RuntimeError("TIDAL rejected the restore operation")
             results.append(RestoreResult(action, "applied"))
         except Exception as exc:
-            results.append(RestoreResult(action, "failed", str(exc)))
+            results.append(RestoreResult(action, "failed", redact_sensitive(exc)))
     return results
 
 
 def write_restore_log(results: list[RestoreResult], filename: str | Path) -> Path:
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    return secure_write_text(
+        path,
         json.dumps(
             {"created_at": datetime.now(timezone.utc).isoformat(), "results": [asdict(result) for result in results]},
             indent=2,
             ensure_ascii=False,
         ) + "\n",
-        encoding="utf-8",
     )
-    return path
