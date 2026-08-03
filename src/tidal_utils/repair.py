@@ -9,6 +9,7 @@ import json
 from .client import retry
 from .matching import choose_candidate, search_album_candidates, search_track_candidates
 from .models import AlbumSnapshot, TrackSnapshot
+from .security import redact_sensitive, safe_display, secure_write_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,11 +46,11 @@ def find_unavailable(session: Any) -> tuple[list[Any], list[Any], list[tuple[Any
 
 
 def _interactive_pick(candidates, label: str):
-    print(f"\nAmbiguous replacement for {label}:")
+    print(f"\nAmbiguous replacement for {safe_display(label)}:")
     for index, candidate in enumerate(candidates[:5], start=1):
         item = candidate.item
         artist = getattr(getattr(item, "artist", None), "name", "Unknown Artist")
-        print(f"  {index}. {getattr(item, 'name', '')} — {artist} ({candidate.confidence:.0%})")
+        print(f"  {index}. {safe_display(getattr(item, 'name', ''))} — {safe_display(artist)} ({candidate.confidence:.0%})")
     response = input("Choose 1-5, or press Enter to skip: ").strip()
     if response.isdigit() and 1 <= int(response) <= min(5, len(candidates)):
         return candidates[int(response) - 1]
@@ -121,14 +122,15 @@ def format_plan(plan: list[RepairAction]) -> str:
         return "No unavailable items found.\n"
     lines = []
     for action in plan:
-        scope = f" in '{action.playlist_title}'" if action.playlist_title else ""
+        scope = f" in '{safe_display(action.playlist_title)}'" if action.playlist_title else ""
         if action.replacement_id:
             lines.append(
-                f"{action.kind}: '{action.old_title}' by '{action.old_artist}'{scope} -> "
-                f"'{action.replacement_title}' [{action.replacement_id}] ({action.confidence:.0%}; {action.reason})"
+                f"{action.kind}: '{safe_display(action.old_title)}' by '{safe_display(action.old_artist)}'{scope} -> "
+                f"'{safe_display(action.replacement_title)}' [{safe_display(action.replacement_id)}] "
+                f"({action.confidence:.0%}; {safe_display(action.reason)})"
             )
         else:
-            lines.append(f"{action.kind}: '{action.old_title}' by '{action.old_artist}'{scope} -> NO MATCH")
+            lines.append(f"{action.kind}: '{safe_display(action.old_title)}' by '{safe_display(action.old_artist)}'{scope} -> NO MATCH")
     return "\n".join(lines) + "\n"
 
 
@@ -169,7 +171,7 @@ def apply_repair_plan(session: Any, plan: list[RepairAction], attempts: int = 3)
                 raise RuntimeError("replacement was added but the unavailable item could not be removed")
             results.append(OperationResult(action, "applied"))
         except Exception as exc:
-            results.append(OperationResult(action, "failed", str(exc)))
+            results.append(OperationResult(action, "failed", redact_sensitive(exc)))
     return results
 
 
@@ -180,5 +182,4 @@ def write_operation_log(results: list[OperationResult], filename: str | Path) ->
         "created_at": datetime.now(timezone.utc).isoformat(),
         "results": [asdict(result) for result in results],
     }
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return path
+    return secure_write_text(path, json.dumps(payload, indent=2, ensure_ascii=False) + "\n")

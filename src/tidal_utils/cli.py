@@ -12,6 +12,7 @@ from .compare import compare_libraries
 from .repair import apply_repair_plan, build_repair_plan, find_unavailable, format_plan, write_operation_log
 from .report import format_text, write_report
 from .restore import apply_restore_plan, build_restore_plan, format_restore_plan, write_restore_log
+from .security import redact_sensitive, safe_display
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,13 +33,19 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("backup_new", nargs="?")
     compare.add_argument("--report")
     compare.add_argument("--format", choices=["text", "json", "csv", "html"])
-    compare.add_argument("--allow-unsafe-pickle", action="store_true")
+    compare.add_argument("--allow-unsafe-pickle", action="store_true", help="Use the restricted loader for a trusted legacy pickle backup.")
     compare.add_argument("--session-file", default="tidal-session-oauth.json")
     compare.set_defaults(handler=_compare)
 
     migrate = subparsers.add_parser("migrate", help="Convert a trusted legacy pickle backup to JSON.")
     migrate.add_argument("source")
     migrate.add_argument("destination")
+    migrate.add_argument(
+        "--trust-legacy-pickle",
+        action="store_true",
+        required=True,
+        help="Confirm that the legacy pickle came from a trusted source.",
+    )
     migrate.set_defaults(handler=_migrate)
 
     scan = subparsers.add_parser("scan", help="List unavailable collection and playlist items.")
@@ -62,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--include-playlists", action="store_true")
     restore.add_argument("--attempts", type=int, default=3)
     restore.add_argument("--log")
-    restore.add_argument("--allow-unsafe-pickle", action="store_true")
+    restore.add_argument("--allow-unsafe-pickle", action="store_true", help="Use the restricted loader for a trusted legacy pickle backup.")
     restore.add_argument("--session-file", default="tidal-session-oauth.json")
     restore.set_defaults(handler=_restore)
     return parser
@@ -92,7 +99,7 @@ def _compare(args) -> int:
 
 
 def _migrate(args) -> int:
-    print(migrate_backup(args.source, args.destination))
+    print(migrate_backup(args.source, args.destination, trust_legacy_pickle=args.trust_legacy_pickle))
     return 0
 
 
@@ -107,19 +114,21 @@ def _scan(args) -> int:
     else:
         print(f"Unavailable albums: {len(albums)}")
         for album in albums:
-            print(f"  {album.id}: {album.name}")
+            print(f"  {safe_display(album.id)}: {safe_display(album.name)}")
         print(f"Unavailable collection tracks: {len(tracks)}")
         for track in tracks:
-            print(f"  {track.id}: {track.name}")
+            print(f"  {safe_display(track.id)}: {safe_display(track.name)}")
         print(f"Unavailable playlist tracks: {len(playlist_tracks)}")
         for playlist, position, track in playlist_tracks:
-            print(f"  {playlist.name} #{position + 1}: {track.id}: {track.name}")
+            print(f"  {safe_display(playlist.name)} #{position + 1}: {safe_display(track.id)}: {safe_display(track.name)}")
     return 0
 
 
 def _repair(args) -> int:
     if not 0 <= args.min_confidence <= 1:
         raise ValueError("--min-confidence must be between 0 and 1")
+    if args.attempts < 1:
+        raise ValueError("--attempts must be at least 1")
     session = log_in(args.session_file)
     plan = build_repair_plan(session, fuzzy=args.fuzzy, minimum_confidence=args.min_confidence, interactive=args.interactive)
     print(format_plan(plan), end="")
@@ -135,6 +144,8 @@ def _repair(args) -> int:
 
 
 def _restore(args) -> int:
+    if args.attempts < 1:
+        raise ValueError("--attempts must be at least 1")
     backup = load_backup(args.backup, allow_unsafe_pickle=args.allow_unsafe_pickle)
     session = log_in(args.session_file)
     plan = build_restore_plan(session, backup, args.include_playlists)
@@ -157,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return int(args.handler(args))
     except (OSError, RuntimeError, ValueError) as exc:
-        parser.error(str(exc))
+        parser.error(redact_sensitive(exc))
         return 2
 
 

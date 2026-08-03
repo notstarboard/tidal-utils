@@ -7,6 +7,26 @@ import re
 import unicodedata
 
 FORMAT_VERSION = 1
+MAX_COLLECTION_ITEMS = 100_000
+MAX_PLAYLISTS = 10_000
+MAX_PLAYLIST_TRACKS = 100_000
+MAX_TEXT_LENGTH = 10_000
+
+
+def _text(value: Any, field_name: str) -> str:
+    text = str(value if value is not None else "")
+    if len(text) > MAX_TEXT_LENGTH:
+        raise ValueError(f"{field_name} exceeds the {MAX_TEXT_LENGTH}-character limit.")
+    return text
+
+
+def _sequence(data: dict[str, Any], field_name: str, limit: int) -> list[Any] | tuple[Any, ...]:
+    value = data.get(field_name, ())
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"{field_name} must be a JSON array.")
+    if len(value) > limit:
+        raise ValueError(f"{field_name} exceeds the {limit}-item limit.")
+    return value
 
 
 def normalize_text(value: str | None) -> str:
@@ -64,10 +84,10 @@ class TrackSnapshot:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TrackSnapshot":
         return cls(
-            id=str(data.get("id", "")),
-            title=str(data.get("title", data.get("name", ""))),
-            artists=tuple(str(value) for value in data.get("artists", ())),
-            album=str(data.get("album", "")),
+            id=_text(data.get("id", ""), "track id"),
+            title=_text(data.get("title", data.get("name", "")), "track title"),
+            artists=tuple(_text(value, "artist") for value in _sequence(data, "artists", 100)),
+            album=_text(data.get("album", ""), "album title"),
             available=data.get("available"),
             explicit=data.get("explicit"),
             audio_quality=data.get("audio_quality"),
@@ -107,9 +127,9 @@ class AlbumSnapshot:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "AlbumSnapshot":
         return cls(
-            id=str(data.get("id", "")),
-            title=str(data.get("title", data.get("name", ""))),
-            artists=tuple(str(value) for value in data.get("artists", ())),
+            id=_text(data.get("id", ""), "album id"),
+            title=_text(data.get("title", data.get("name", "")), "album title"),
+            artists=tuple(_text(value, "artist") for value in _sequence(data, "artists", 100)),
             available=data.get("available"),
             num_tracks=data.get("num_tracks"),
             explicit=data.get("explicit"),
@@ -143,10 +163,10 @@ class PlaylistSnapshot:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PlaylistSnapshot":
         return cls(
-            id=str(data.get("id", "")),
-            title=str(data.get("title", data.get("name", ""))),
-            description=str(data.get("description", "")),
-            tracks=tuple(TrackSnapshot.from_dict(track) for track in data.get("tracks", ())),
+            id=_text(data.get("id", ""), "playlist id"),
+            title=_text(data.get("title", data.get("name", "")), "playlist title"),
+            description=_text(data.get("description", ""), "playlist description"),
+            tracks=tuple(TrackSnapshot.from_dict(track) for track in _sequence(data, "tracks", MAX_PLAYLIST_TRACKS)),
         )
 
     def match_key(self) -> str:
@@ -166,15 +186,22 @@ class LibraryBackup:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "LibraryBackup":
+        if not isinstance(data, dict):
+            raise ValueError("Backup data must be a JSON object.")
         version = int(data.get("format_version", 0))
         if version > FORMAT_VERSION:
             raise ValueError(
                 f"Backup format {version} is newer than supported format {FORMAT_VERSION}."
             )
+        tracks = _sequence(data, "tracks", MAX_COLLECTION_ITEMS)
+        albums = _sequence(data, "albums", MAX_COLLECTION_ITEMS)
+        playlists = _sequence(data, "playlists", MAX_PLAYLISTS)
+        if not all(isinstance(item, dict) for item in (*tracks, *albums, *playlists)):
+            raise ValueError("Backup collections must contain JSON objects.")
         return cls(
             format_version=version or FORMAT_VERSION,
-            created_at=str(data.get("created_at", "")),
-            tracks=tuple(TrackSnapshot.from_dict(track) for track in data.get("tracks", ())),
-            albums=tuple(AlbumSnapshot.from_dict(album) for album in data.get("albums", ())),
-            playlists=tuple(PlaylistSnapshot.from_dict(playlist) for playlist in data.get("playlists", ())),
+            created_at=_text(data.get("created_at", ""), "created_at"),
+            tracks=tuple(TrackSnapshot.from_dict(track) for track in tracks),
+            albums=tuple(AlbumSnapshot.from_dict(album) for album in albums),
+            playlists=tuple(PlaylistSnapshot.from_dict(playlist) for playlist in playlists),
         )
